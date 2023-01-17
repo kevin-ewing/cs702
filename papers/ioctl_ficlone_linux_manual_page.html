@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>ioctl_ficlonerange(2) - Linux manual page</title>
+    <link rel="stylesheet" type="text/css" href="../../../style.css" title="style" />
+    <link rel="stylesheet" type="text/css" href="../style.css" title="style" />
+</head>
+
+<body>
+
+<div class="page-top"><a id="top_of_page"></a></div>
+<!--%%%TOP_BAR%%%-->
+    <div class="nav-bar">
+        <table class="nav-table">
+            <tr>
+                <td class="nav-cell">
+                    <p class="nav-text">
+                        <a href="../../../index.html">man7.org</a> &gt; Linux &gt; <a href="../index.html">man-pages</a>
+                    </p>
+                </td>
+                <td class="training-cell">
+                    <p class="training-text"><a class="training-link" href="http://man7.org/training/">Linux/UNIX system programming training</a></p>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+<hr class="nav-end" />
+
+<!--%%%PAGE_START%%%-->
+<h1>ioctl_ficlonerange(2) &mdash; Linux manual page</h1>
+
+
+<table class="sec-table">
+<tr>
+    <td>
+        <p class="section-dir">
+<a href="#NAME">NAME</a> | <a href="#SYNOPSIS">SYNOPSIS</a> | <a href="#DESCRIPTION">DESCRIPTION</a> | <a href="#RETURN_VALUE">RETURN&nbsp;VALUE</a> | <a href="#ERRORS">ERRORS</a> | <a href="#VERSIONS">VERSIONS</a> | <a href="#CONFORMING_TO">CONFORMING&nbsp;TO</a> | <a href="#NOTES">NOTES</a> | <a href="#SEE_ALSO">SEE&nbsp;ALSO</a> | <a href="#COLOPHON">COLOPHON</a>
+        </p>
+    </td>
+</tr>
+<tr>
+    <td class="search-box">
+        <div class="man-search-box">
+
+            <form method="get" action="https://www.google.com/search">
+                <fieldset class="man-search">
+                    <input type="text" name="q" size="10" maxlength="255" value="" />
+                    <input type="hidden" name="sitesearch" value="man7.org/linux/man-pages" />
+                    <input type="submit" name="sa" value="Search online pages" />
+                </fieldset>
+            </form>
+
+        </div>
+    </td>
+    <td> </td>
+</tr>
+</table>
+
+<!--%%%TEXT_START%%%-->
+<pre>
+<span class="headline">IOCTL_FICLONERANGE(2)   Linux Programmer's Manual  IOCTL_FICLONERANGE(2)</span>
+</pre>
+<h2><a id="NAME" href="#NAME"></a>NAME  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       ioctl_ficlonerange, ioctl_ficlone - share some the data of one
+       file with another file
+</pre>
+<h2><a id="SYNOPSIS" href="#SYNOPSIS"></a>SYNOPSIS  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       <b>#include &lt;linux/fs.h&gt;        </b>/* Definition of <b>FICLONE* </b>constants */
+       <b>#include &lt;sys/ioctl.h&gt;</b>
+
+       <b>int ioctl(int </b><i>dest_fd</i><b>, FICLONERANGE, struct file_clone_range *</b><i>arg</i><b>);</b>
+       <b>int ioctl(int </b><i>dest_fd</i><b>, FICLONE, int </b><i>src_fd</i><b>);</b>
+</pre>
+<h2><a id="DESCRIPTION" href="#DESCRIPTION"></a>DESCRIPTION  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       If a filesystem supports files sharing physical storage between
+       multiple files ("reflink"), this <a href="../man2/ioctl.2.html">ioctl(2)</a> operation can be used
+       to make some of the data in the <i>src_fd</i> file appear in the <i>dest_fd</i>
+       file by sharing the underlying storage, which is faster than
+       making a separate physical copy of the data.  Both files must
+       reside within the same filesystem.  If a file write should occur
+       to a shared region, the filesystem must ensure that the changes
+       remain private to the file being written.  This behavior is
+       commonly referred to as "copy on write".
+
+       This ioctl reflinks up to <i>src_length</i> bytes from file descriptor
+       <i>src_fd</i> at offset <i>src_offset</i> into the file <i>dest_fd</i> at offset
+       <i>dest_offset</i>, provided that both are files.  If <i>src_length</i> is
+       zero, the ioctl reflinks to the end of the source file.  This
+       information is conveyed in a structure of the following form:
+
+           struct file_clone_range {
+               __s64 src_fd;
+               __u64 src_offset;
+               __u64 src_length;
+               __u64 dest_offset;
+           };
+
+       Clones are atomic with regards to concurrent writes, so no locks
+       need to be taken to obtain a consistent cloned copy.
+
+       The <b>FICLONE </b>ioctl clones entire files.
+</pre>
+<h2><a id="RETURN_VALUE" href="#RETURN_VALUE"></a>RETURN VALUE  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       On error, -1 is returned, and <i><a href="../man3/errno.3.html">errno</a></i> is set to indicate the error.
+</pre>
+<h2><a id="ERRORS" href="#ERRORS"></a>ERRORS  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       Error codes can be one of, but are not limited to, the following:
+
+       <b>EBADF  </b><i>src_fd</i> is not open for reading; <i>dest_fd</i> is not open for
+              writing or is open for append-only writes; or the
+              filesystem which <i>src_fd</i> resides on does not support
+              reflink.
+
+       <b>EINVAL </b>The filesystem does not support reflinking the ranges of
+              the given files.  This error can also appear if either
+              file descriptor represents a device, FIFO, or socket.
+              Disk filesystems generally require the offset and length
+              arguments to be aligned to the fundamental block size.
+              XFS and Btrfs do not support overlapping reflink ranges in
+              the same file.
+
+       <b>EISDIR </b>One of the files is a directory and the filesystem does
+              not support shared regions in directories.
+
+       <b>EOPNOTSUPP</b>
+              This can appear if the filesystem does not support
+              reflinking either file descriptor, or if either file
+              descriptor refers to special inodes.
+
+       <b>EPERM  </b><i>dest_fd</i> is immutable.
+
+       <b>ETXTBSY</b>
+              One of the files is a swap file.  Swap files cannot share
+              storage.
+
+       <b>EXDEV  </b><i>dest_fd</i> and <i>src_fd</i> are not on the same mounted filesystem.
+</pre>
+<h2><a id="VERSIONS" href="#VERSIONS"></a>VERSIONS  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       These ioctl operations first appeared in Linux 4.5.  They were
+       previously known as <b>BTRFS_IOC_CLONE </b>and <b>BTRFS_IOC_CLONE_RANGE</b>,
+       and were private to Btrfs.
+</pre>
+<h2><a id="CONFORMING_TO" href="#CONFORMING_TO"></a>CONFORMING TO  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       This API is Linux-specific.
+</pre>
+<h2><a id="NOTES" href="#NOTES"></a>NOTES  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       Because a copy-on-write operation requires the allocation of new
+       storage, the <a href="../man2/fallocate.2.html">fallocate(2)</a> operation may unshare shared blocks to
+       guarantee that subsequent writes will not fail because of lack of
+       disk space.
+</pre>
+<h2><a id="SEE_ALSO" href="#SEE_ALSO"></a>SEE ALSO  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       <a href="../man2/ioctl.2.html">ioctl(2)</a>
+</pre>
+<h2><a id="COLOPHON" href="#COLOPHON"></a>COLOPHON  &nbsp; &nbsp; &nbsp; &nbsp; <a href="#top_of_page"><span class="top-link">top</span></a></h2><pre>
+       This page is part of release 5.13 of the Linux <i>man-pages</i> project.
+       A description of the project, information about reporting bugs,
+       and the latest version of this page, can be found at
+       <a href="https://www.kernel.org/doc/man-pages/">https://www.kernel.org/doc/man-pages/</a>.
+
+<span class="footline">Linux                          2021-03-22          IOCTL_FICLONERANGE(2)</span>
+</pre>
+
+<hr class="end-man-text" />
+<p>Pages that refer to this page: 
+    <a href="../man2/ioctl.2.html">ioctl(2)</a>
+</p>
+<hr/>
+
+<p class="page-copyright"><a href="../man2/ioctl_ficlonerange.2.license.html">Copyright and license for this manual page</a></p> 
+<hr class="start-footer" />
+
+<div class="footer"> 
+
+<table class="colophon-table">
+    <tr>
+    <td class="pub-info">
+        <p>
+            HTML rendering created 2022-12-18
+            by <a href="https://man7.org/mtk/index.html">Michael Kerrisk</a>, 
+            author of 
+            <a href="https://man7.org/tlpi/"><em>The Linux Programming Interface</em></a>, 
+            maintainer of the 
+            <a href="https://www.kernel.org/doc/man-pages/">Linux <em>man-pages</em> project</a>.
+        </p>
+        <p>
+            For details of in-depth
+            <strong>Linux/UNIX system programming training courses</strong>
+            that I teach, look <a href="https://man7.org/training/">here</a>.
+        </p>
+        <p>
+            Hosting by <a href="https://www.jambit.com/index_en.html">jambit GmbH</a>.
+        </p>
+    </td>
+    <td class="colophon-divider">
+    </td>
+    <td class="tlpi-cover">
+        <a href="https://man7.org/tlpi/"><img src="https://man7.org/tlpi/cover/TLPI-front-cover-vsmall.png" alt="Cover of TLPI" /></a>
+    </td>
+    </tr>
+</table>
+
+</div>
+
+<hr class="end-footer" />
+
+
+
+<!--BEGIN-SITETRACKING-->
+<!-- SITETRACKING.man7.org_linux_man-pages -->
+
+<!-- Default Statcounter code for man7.org/linux/man-pages
+http://www.man7.org/linux/man-pages -->
+<script type="text/javascript">
+var sc_project=7422636;
+var sc_invisible=1;
+var sc_security="9b6714ff";
+</script>
+<script type="text/javascript"
+src="https://www.statcounter.com/counter/counter.js"
+async></script>
+<noscript><div class="statcounter"><a title="Web Analytics
+Made Easy - StatCounter" href="https://statcounter.com/"
+target="_blank"><img class="statcounter"
+src="https://c.statcounter.com/7422636/0/9b6714ff/1/"
+alt="Web Analytics Made Easy -
+StatCounter"></a></div></noscript>
+<!-- End of Statcounter Code -->
+
+
+
+<!-- Start of Google Analytics Code -->
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-9830363-8']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+<!-- End of Google Analytics Code -->
+
+<!--END-SITETRACKING-->
+
+</body>
+</html>
