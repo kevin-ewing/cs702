@@ -1,0 +1,7 @@
+google around for ZFS `reflink` or freeBSD `reflink`
+    - Long github thread about this https://github.com/openzfs/zfs/issues/405 but I need more technical before I get into it
+
+
+get a better understanding of ZFS in general: Begin reading...
+    - Introducing ZFS on Linux
+    - The Design and Implementation of the FreeBSD operating system
