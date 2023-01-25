@@ -1,0 +1,20 @@
+STREAM OF CONSCIOUSNESS NOTES:
+
+Jan 23:
+    Goals for the week:
+        Take look at btrFS stuff
+        Look back at thread
+        Looking through the fork
+        Plan to meet on Thursday
+        Postpone till after thursday
+            Attempting to get linux on the machine running ZFS and btrFS
+Jan 24:
+    Reading BTRFS_The_Linux_B-tree_Filesystem.pdf -> good amount of similarities to ZFS but fundamentally different hierarchical structure
+        No concrete mention of -`reflink`s but does a great job outlining btrFS basics and how writing and freeing blocks works
+    Re exploring this feature request on ZFS https://github.com/openzfs/zfs/issues/405 and https://github.com/pjd/openzfs/commit/83921c797a65fbc46a72e2a90c40822a988dee28
+Jan 25:
+    Working on the "how" presentation
+    Updated bibliography with all new sources
+
+
+
