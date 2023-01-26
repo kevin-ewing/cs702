@@ -15,6 +15,22 @@ Jan 24:
 Jan 25:
     Working on the "how" presentation
     Updated bibliography with all new sources
+Jan 26:
+    Read through feature request thread again https://github.com/openzfs/zfs/issues/405 "COW cp (--reflink) support #405"
+    Explored https://github.com/openzfs/zfs/discussions/4237
+    Also https://github.com/openzfs/zfs/issues/1063 "Please implement "cp --reflink=always" with ZoL #1063"
+    Also https://github.com/openzfs/zfs/issues/2554 "btrfs bedup equivalent #2554"
+        - "There's 2 ways a block can be referenced multiple times: dedup and snapshots. You can't "instantly" clone a file because doing it that way doesn't meet either criteria. In contrast BTRFS seems to use some crazy layers of indirection and trees to let it do that."
+    Presentation https://www.usenix.org/legacy/event/lsf07/tech/rodeh.pdf
+    WAFL implementation https://community.netapp.com/t5/Microsoft-Virtualization-Discussions/What-is-SIS-Clone/td-p/6462
+        "SIS clone is a capability withing Data ONTAP to run the dedupe engine in reverse to clone a file.  Instead of copying all the block, and then removing the duplicate blockd at a later date.  Instead we create a sparse file  (non-allocated) and then SIS clone manipulates the WAFL pointers in the destination file to point to the blocks for the source file. The end result is an exact copy of the source file that is pre-deduped.  The benefit of SIS-Clone is we can manipulate WAFL pointers even faster than we can write block, so the copy operation is an order of magnitude quicker. "
+    Already implemented in XFS https://strugglers.net/~andy/blog/2017/01/10/xfs-reflinks-and-deduplication/
+    "FAST-Tracking REFLINK and Offline Deduplication, first for LINUX only #13349" https://github.com/openzfs/zfs/issues/13349
+    Oracle ZFS has reflinks already? https://blogs.oracle.com/solaris/post/reflink3c-what-is-it-why-do-i-care-and-how-can-i-use-it
+    Block Cloning Table branch https://github.com/openzfs/zfs/pull/13392
+        Explanation video https://www.youtube.com/watch?v=hYBgoaQC-vo
 
 
-
+    TODO:
+        Search this for block referencing https://docs.google.com/document/d/1w2jv2XVYFmBVvG1EGf-9A5HBVsjAYoLIFZAnWHhV-BM/edit#
+        https://www.youtube.com/watch?v=hYBgoaQC-vo maybe describes block reference table
