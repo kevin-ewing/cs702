@@ -30,7 +30,70 @@ Jan 26:
     Block Cloning Table branch https://github.com/openzfs/zfs/pull/13392
         Explanation video https://www.youtube.com/watch?v=hYBgoaQC-vo
 
+    Notes with pete:
+        Why inst the naive approach sufficient
+        Maybe dive deep into why the BRT has been implemented when it doesn't need to be
 
     TODO:
-        Search this for block referencing https://docs.google.com/document/d/1w2jv2XVYFmBVvG1EGf-9A5HBVsjAYoLIFZAnWHhV-BM/edit#
-        https://www.youtube.com/watch?v=hYBgoaQC-vo maybe describes block reference table
+        How referencing is done
+        How snapshots do the referencing
+        Grep the source code
+            Find the field in the struct that is the reference count and find every usage of it
+        One last deep dive into why the naive solution doesnt work
+        Get the BRT branch downloaded and compiled -> probably on Linux
+
+
+Jan 27:
+    How referencing is done
+        Reread block referencing section of The_Design_and_Implementation_of_the_FreeBSD_Operating_System
+            Space allocation handled by the Storage Pool Allocator (SPA) module (LOOK INTO SOURCE CODE OF)
+                SPA looks up available space in the MOS space map.
+                1. Chooses the disk with the most free space
+                2. From the fixed-sie space maps describing the space on the disk select the one that is the least fragmented
+                3. Allocate a chunk of space with the needed size that is closest to the previous allocation
+            Freeing blocks -> ZFS tracks its used and available blocks using space maps, birth time, and deadliest
+            Deduplication also increments a blocks associated reference count.
+
+    How snapshots do the referencing
+        Reread block referencing section of The_Design_and_Implementation_of_the_FreeBSD_Operating_System
+            Checkpoint to make sure everything is up to date
+            Allocate a new dnode that will represent the snapshot
+            Copy over the block pointer from the current filesystem being snapshotted to the newly allocated snapshot dnode
+            Link the new dnode to the head of the filesystem's snapshot list (youngest snapshot)
+            Add snapshot name etc...
+
+    Existing design considerations:
+        "File-cloning can be thought of as hard-links with copy-on-write properties Use-cases include cloning VM images and other large files  or being able to recover files from snapshots, fast and without additional space Implementation: Dedup comes to mind as the end-functionality is somewhat similar. That said we would like this to be a generic feature of ZFS and not a feature flag. We’d also like to avoid the performance issues that come with dedup. Current idea revolves around a new block-reference table, a mapping of vdev_id+offset to a refcount. The attempt would be to avoid overhead in reads/writes and just put the overhead in when freeing blocks with more than one reference (to make such operations performant we’d probably need to maintain most if not all of our structures/metadata in memory). There are a few implementation questions that we’d need to iron-out. For example, do we expect this to work across datasets? If that’s the case how would it affect send/receive assuming we want to maintain the cloning-property? What about memory? Can’t that table grow too big? We’d probably need to think hard of how the table is managed and how to avoid unpredictable performance."
+
+    Watched https://www.youtube.com/watch?v=hij7PGGjevc talking about 98% done
+        For BRT we dont have a specific bit that we need to check table we have to check for every free.
+            What if we used one of the free bits in the dnode struct
+        Keys are not random so lookup is better and faster
+            vdev is in a range, and keep how many references is in the range
+            Small 1mb per terabits
+            Helps us know if the block might be in the brt
+                We can immediately tell if it is not
+
+Jan 29th
+    Watched design implementation talk https://www.youtube.com/watch?v=Y9HQ4RbqIEw
+        Could reuse dedup, just read the checksum from block pointers and make a new file pointing to the same checksum
+            "We dont want this to be another dedup"
+        "The problem is of course, if we have a data block on the disk and we have a block pointer pointing at this block, we cannot have a reference counter in this block pointer because, of course, we can not modify block pointer."
+
+        Powels idea was to create something similar to dedup
+            Things with a reference count of one dominate the dedup table
+            The block reference table will only have entries when their reference count is greater than one
+        In the dedup table they are data hashes so they can not be sorted really
+            Not good for caching or easy lookup
+        "We have a block of data, and we have a block pointer pointing at the data, and we can not modify that. But once you call this clone file system call. We will read the existing block pointers, create new block pointers, just copying the data from the original block pointers. Storing them in a new file and creating entries in the block reference tables. The entry is only created when the block is actually cloned. So if you don't use the functionally there is no 'price to pay'." 
+        No performance impact on read or write, only when a block pointer is freed do we have to consult to block reference table.
+        "When we free the block we can not really tell if the block has more than one reference" ---- WHYYYYYY
+        "Deduplication has the dedup bit set"
+        Deduplication Table entry is 392 bytes
+        Block Reference Table entry is 80 bytes or smaller
+            Plus it is sortable
+            "The block reference table is basically a mapping from the vdev + offset to the refcount. You do a lot better by putting it in a dataset that is sorted
+        One idea for better free performance would be to actually have a bit in the block pointer structure that then triggers us to look into the block reference table
+        To have send/receive work you would need massive post-processing after the fact
+        In-memory cost is 10x smaller than DDT
+    How does snapshots increment block references... It should be THE SAME PROCESS
