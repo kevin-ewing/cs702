@@ -35,11 +35,11 @@ Jan 26:
         Maybe dive deep into why the BRT has been implemented when it doesn't need to be
 
     TODO:
-        How referencing is done
-        How snapshots do the referencing
-        Grep the source code
+        (done) How referencing is done 
+        (done) How snapshots do the referencing
+        (done) Grep the source code
             Find the field in the struct that is the reference count and find every usage of it
-        One last deep dive into why the naive solution doesnt work
+        (done) One last deep dive into why the naive solution doesnt work
         Get the BRT branch downloaded and compiled -> probably on Linux
 
 
@@ -97,3 +97,12 @@ Jan 29th
         To have send/receive work you would need massive post-processing after the fact
         In-memory cost is 10x smaller than DDT
     How does snapshots increment block references... It should be THE SAME PROCESS
+
+Jan 30th
+    Started looking at source code. Trying to find when block references are changed.
+    https://github.com/openzfs/zfs/pull/13392
+        - for BRT we only store 64bit offset and 64bit reference counter
+    What if we added in a reference count 64bits into the block reference structure rather than the block reference table
+    There are 2, 64 bit spare spaces in each block reference structure
+    ./include/sys/spa.h has the definition of the block pointer structure. Has two 64-bit padding chunks
+        If we use one of these, then the block reference table is irrelevant. We not longer have the negative side effects of freeing a block and therefore the cloning can be turned on by default and therefore be much better than a new deduplication table DDT but for the block pointer table. Now, just when freeing blocks it is as easy as decrementing the block clone reference count.
