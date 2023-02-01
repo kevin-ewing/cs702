@@ -99,6 +99,7 @@ Jan 29th
     How does snapshots increment block references... It should be THE SAME PROCESS
 
 Jan 30th
+    https://docs.google.com/document/d/1w2jv2XVYFmBVvG1EGf-9A5HBVsjAYoLIFZAnWHhV-BM/edit#heading=h.7pnof6czteeh (DEVELOPER NOTES)
     Started looking at source code. Trying to find when block references are changed.
     https://github.com/openzfs/zfs/pull/13392
         - for BRT we only store 64bit offset and 64bit reference counter
@@ -106,3 +107,6 @@ Jan 30th
     There are 2, 64 bit spare spaces in each block reference structure
     ./include/sys/spa.h has the definition of the block pointer structure. Has two 64-bit padding chunks
         If we use one of these, then the block reference table is irrelevant. We not longer have the negative side effects of freeing a block and therefore the cloning can be turned on by default and therefore be much better than a new deduplication table DDT but for the block pointer table. Now, just when freeing blocks it is as easy as decrementing the block clone reference count.
+
+Feb 1st
+    Might need dnodes to point at THE SAME BLOCK POINTER not just a duplicate -> he same block pointer

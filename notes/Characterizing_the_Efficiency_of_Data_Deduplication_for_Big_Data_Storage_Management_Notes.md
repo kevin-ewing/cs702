@@ -11,7 +11,7 @@
 - Cloud vendors pay more attention to deduplication because there are many replicas in the data outsourced to the cloud (75% of data are redundant)
 - Conclusion:
     - Local deduplication can leverage parallelism to reduce the overhead of hashing but cannot exploit the maximum redundancy
-    - Global deduplication can eliminate all redundant disk accesses byt cannot hide the hash overhead
+    - Global deduplication can eliminate all redundant disk accesses but cannot hide the hash overhead
     - Fine-grained deduplication is not always better, especially when the dataset is big
     - Although deduplication brings extra power consumption, the energy consumption can be less if the level of redundancy is high enough to reduce execution time
 
