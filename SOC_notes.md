@@ -102,10 +102,10 @@ How does snapshots increment block references... It should be THE SAME PROCESS
 
 ## Jan 30th
 
-https://docs.google.com/document/d/1w2jv2XVYFmBVvG1EGf-9A5HBVsjAYoLIFZAnWHhV-BM/edit#heading=h.7pnof6czteeh (DEVELOPER NOTES)
+<https://docs.google.com/document/d/1w2jv2XVYFmBVvG1EGf-9A5HBVsjAYoLIFZAnWHhV-BM/edit#heading=h.7pnof6czteeh> (DEVELOPER NOTES)
 Started looking at source code. Trying to find when block references are changed.
 
-- https://github.com/openzfs/zfs/pull/13392
+- <https://github.com/openzfs/zfs/pull/13392>
   - for BRT we only store 64bit offset and 64bit reference counter
 - What if we added in a reference count 64bits into the block reference structure rather than the block reference table
 There are 2, 64 bit spare spaces in each block reference structure
@@ -119,7 +119,7 @@ Might need dnodes to point at THE SAME BLOCK POINTER not just a duplicate -> he 
 ## Feb 21st
 
 Getting ZFS compiled and running with archlinux: instructions followed:
-https://blog.timo.page/installing-arch-linux-on-zfs:
+<https://blog.timo.page/installing-arch-linux-on-zfs>:
 
 The default ISO image you can download from the Arch Linux website does not support ZFS. That's why we have to create our own using the archiso tool. We will install the tool from the Arch Linux repositories.
 
@@ -206,7 +206,6 @@ The default ISO image you can download from the Arch Linux website does not supp
     ```
 
 11. You need at least one dataset for your root filesystem /. I'm creating an additional dataset for my /home directory, so I can take snapshots of my base system and it separately. You can create additional datasets if you want.
-
 
     ``` bash
     # Root dataset
@@ -335,3 +334,194 @@ The default ISO image you can download from the Arch Linux website does not supp
     zfs umount -a
     zpool export -a
     ```
+
+DIDNT WORK
+
+## Feb 22nd
+
+- Attempt at getting running on Ubuntu
+- <https://simeontrieu.medium.com/a-gentle-introduction-to-zfs-on-ubuntu-18-04-aarch64-67177ba2db4a>
+
+1. Downlaod the Ubuntu 18.04 image from: <https://releases.ubuntu.com/18.04/> (server version)
+
+2. Next is to write the ISO to USB, to do that first exit docker and check what the device is named.
+
+    ```bash
+    diskutil list
+    ```
+
+3. Unmount the USB disk
+
+    ```bash
+    diskutil unmountDisk /dev/disk4
+    ```
+
+4. Write the ISO to the USB.
+
+    ```bash
+    sudo dd bs=4m if=Downloads/ubuntu-18.04.6-live-server-amd64.iso of=/dev/disk4
+    ```
+
+5. Eject the USB when done (make sure the drive is formatted as FAT32)
+
+    ```bash
+    diskutil eject /dev/disk4
+    ```
+
+6. Startup and follow prompts.
+
+7. Install dependencies:
+
+    ```bash
+    sudo apt install -y alien autoconf automake build-essential dkms fakeroot gawk gdebi-core libacl1-dev libaio-dev libattr1-dev libblkid-dev libdevmapper-dev libelf-dev libselinux-dev libssl-dev libtool libudev-dev nfs-kernel-server python3 python3-dev python3-cffi python3-setuptools uuid-dev zlib1g-dev
+    ```
+
+8. Insatall headers:
+
+    ```bash
+    sudo apt install linux-headers-$(uname -r)
+    ```
+
+9. Download zfs
+
+    ```bash
+    git clone https://github.com/openzfs/zfs
+    cd zfs
+    sh autogen.sh
+    ./configure
+    ```
+
+10. Compile ZFS:
+
+    ```bash
+    make -s -j$((`nproc`-1))
+    ```
+
+11. Install ZFS
+
+    ```bash
+    sudo make install
+    sudo ldconfig
+    sudo depmod
+    sudo modprobe zfs
+    ```
+
+12. If one wants to uninstall ZFS, for whatever reason, run the following command lines:
+
+    ```bash
+    sudo modprobe -r zfs
+    sudo make uninstall
+    sudo ldconfig
+    sudo depmod
+    ```
+
+13. Start ZFS services, if not started already:
+
+    ```bash
+    sudo systemctl enable --now zfs-import-cache.service
+    sudo systemctl enable --now zfs-import-scan.service
+    sudo systemctl enable --now zfs-import.target
+    sudo systemctl enable --now zfs-mount.service
+    sudo systemctl enable --now zfs-share.service
+    sudo systemctl enable --now zfs-zed.service
+    sudo systemctl enable --now zfs.target
+    ```
+
+14. Test the Installation
+Run a simple status command to verify that ZFS and the associated kernel module are running. With no pools setup and a properly loaded ZFS kernel module, one should see:
+
+    ```bash
+    zpool status
+    ```
+
+If one sees `no pools available` then it worked. If one sees `The ZFS modules are not loaded. Try running '/sbin/modprobe zfs' as root to load them.` Then try running `sudo modprobe zfs` again.
+
+## Feb 23rd
+
+- Pool setup
+<https://ubuntu.com/tutorials/setup-zfs-storage-pool#3-creating-a-zfs-pool>
+
+1. Check installed drives by running:
+
+    ```bash
+    sudo fdisk -l
+    ```
+
+2. To create a striped pool, we run:
+
+     ```bash
+    sudo zpool create new-pool sda
+    ```
+
+Conclusions for Pete:
+
+1. Why I chose Ubuntu over Arch as the linix distro.
+
+    - In order to run ZFS on archlinux you have to embedding ZFS module into custom archiso.
+    - So I attempted to create a docker image running archlinux so I could compile the latest ZFS and then create a archiso image with the embedded module.
+    - There are currently no archlinux docker images that work on ARM chips (UGH). Had to get other compute.
+        - It was dead. Took time to boot, intall docker, run image, create ISO
+    - Then docker on mac does not support reading and writing to USBs from within the image. I was stuck for a bit then realized I can share a file within docker to outside of it.
+    - Finally I was able to burn USB with arhclinux ISO with custom ZFS module.
+    - Booted and continued directions as listed above.
+        - Failed at:
+
+            ```bash
+            systemctl enable zfs.target zfs-import-cache \
+            ```
+
+    - Could not continue on. Decided to look to see what linux distro was popular for running ZFS. Most popular (other than suggestions to run on FreeBSD) were Ubuntu and TrueNAS.
+        - From my understanding TrueNAS isnt really linux? Though I am not sure
+    - So I snagged bootable 18.04 LTS ISO and set it up. Worked really well. Easy to load module. Dont have to compile and create your onw bootable iso with the embedde dmodule like you do in Archlinux.
+        - Though after more careful digging there might be a way to load the module without having to do the whole kernel.
+    - Checked out the pull request block reference table branch. Compiled and used the module.
+
+2. What have I learned about the implementation of the block reference table from the branch.
+
+    - Bulk of changes and core functionality are in `module/zfs/brt.c`
+        - FOUND THE FOLLOWING:
+        "If the D (dedup) bit is not set in the block pointer, it means that the block is not in the dedup table (DDT) and we won't consult the DDT when we need to free the block. Block Cloning must be consulted on every free, because we cannot modify the source BP (eg. by setting something similar to the D bit), thus we have no hint if the block is in the Block Reference Table (BRT), so we need to look into the BRT."
+
+        - `ioctl_ficlonerange(2)` and `copy_file_range(2)` are the sys calls
+
+    - Changes to assigning the bew block pointers in `module/zfs/dmu.c`
+        - "Just copy the BP as it contains the data."
+        - Evidently there is a way to straight up copy a block pointer
+    - Handling cloning call logic is in `module/zfs/zfs_vnops.c`:
+        - `zfs_clone_range()`
+        - "TODO: We want to extend it in the future to allow cloning to datasets with the same keys, like clones or to be able to clone a file from a snapshot of an encrypted dataset into the dataset itself."
+
+## Notes Feb 24
+
+- Look into `vnops()` more
+- Suggestion on where to go next:
+  - Look at all the places where he plugs into the existing code
+  - Sketch out a design (figure out what data scructures get changed in what way at what points)
+  - Future research, finding out the actual importance of deduplicaiton and how block reference table could solve that.
+  - Look into the ZFS testing
+
+## Notes Feb 26
+
+- Started working on the `BRT_mpa.md`. Going through the 48 files and examining what is being changed, when and why
+- For CI/CD job the testing is done with `zfs-tests-functional.yml`
+  - There is also a `.github/workflows/zfs-tests-sanity.yml`.
+
+## Notes Feb 27
+
+- Deep dive into the following files:
+
+1. `module/zfs/dbuf.c`
+2. `module/zfs/dmu.c`
+    - DMU stands for Data Managememnt Unit
+3. `module/zfs/zfs_vnops.c`
+4. `module/zfs/zil.c`
+
+## Notes Feb 28
+
+- VSCODE extension for LSP.
+- Might be worth grepping around to see if he is testing otherplaces
+  - `zfs_clone_range()`
+  - Email PJD
+- Finish understanding of my implementation
+- Find structures that we are hoping to edit
+  - How PJD edits them.
