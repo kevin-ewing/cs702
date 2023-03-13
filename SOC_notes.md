@@ -1,6 +1,7 @@
-# STREAM OF CONSCIOUSNESS NOTES:
+# STREAM OF CONSCIOUSNESS NOTES
 
-## Jan 23:
+## Jan 23
+
 - Goals for the week:
     -  Take look at btrFS stuff
     -  Look back at thread
@@ -9,16 +10,19 @@
     -  Postpone till after thursday
         - Attempting to get linux on the machine running ZFS and btrFS
 
-## Jan 24:
+## Jan 24
+
 - Reading BTRFS_The_Linux_B-tree_Filesystem.pdf -> good amount of similarities to ZFS but fundamentally different hierarchical structure
     -  No concrete mention of -`reflink`s but does a great job outlining btrFS basics and how writing and freeing blocks works
 - Re exploring this feature request on ZFS https://github.com/openzfs/zfs/issues/405 and https://github.com/pjd/openzfs/commit/83921c797a65fbc46a72e2a90c40822a988dee28
 
-## Jan 25:
+## Jan 25
+
 - Working on the "how" presentation
 - Updated bibliography with all new sources
 
-## Jan 26:
+## Jan 26
+
 - Read through feature request thread again https://github.com/openzfs/zfs/issues/405 "COW cp (--reflink) support #405"
     - Explored https://github.com/openzfs/zfs/discussions/4237
     - Also https://github.com/openzfs/zfs/issues/1063 "Please implement "cp --reflink=always" with ZoL #1063"
@@ -33,11 +37,12 @@
 - Block Cloning Table branch https://github.com/openzfs/zfs/pull/13392
     - Explanation video https://www.youtube.com/watch?v=hYBgoaQC-vo
 
-- Notes with pete:
+- Notes with pete
+
     -  Why inst the naive approach sufficient
     -  Maybe dive deep into why the BRT has been implemented when it doesn't need to be
 
-    TODO:
+    TODO
     - (done) How referencing is done 
     - (done) How snapshots do the referencing
     - (done) Grep the source code
@@ -46,7 +51,8 @@
     - Get the BRT branch downloaded and compiled -> probably on Linux
 
 
-## Jan 27:
+## Jan 27
+
 - How referencing is done
     -  Reread block referencing section of The_Design_and_Implementation_of_the_FreeBSD_Operating_System
         - Space allocation handled by the Storage Pool Allocator (SPA) module (LOOK INTO SOURCE CODE OF)
@@ -78,6 +84,7 @@
             - We can immediately tell if it is not
 
 ## Jan 29th
+s
 - Watched design implementation talk https://www.youtube.com/watch?v=Y9HQ4RbqIEw
     - Could reuse dedup, just read the checksum from block pointers and make a new file pointing to the same checksum
         - "We dont want this to be another dedup"
@@ -525,3 +532,129 @@ Conclusions for Pete:
 - Finish understanding of my implementation
 - Find structures that we are hoping to edit
   - How PJD edits them.
+
+## Notes Mar 3
+
+[https://code.visualstudio.com/docs/editor/editingevolved#:~:text=If%20a%20language%20supports%20it,with%20Ctrl%2BAlt%2BClick.]
+
+- If a language supports it, you can go to the definition of a symbol by pressing F12. If you press Ctrl and hover over a symbol, a preview of the declaration will appear: Ctrl Hover. Tip: You can jump to the definition with Ctrl+Click or open the definition to the side with Ctrl+Alt+Click.
+- Some languages also support jumping to the type definition of a symbol by running the Go to Type Definition command from either the editor context menu or the Command Palette. This will take you to the definition of the type of a symbol. The command editor.action.goToTypeDefinition is not bound to a keyboard shortcut by default but you can add your own custom keybinding.
+- Languages can also support jumping to the implementation of a symbol by pressing ⌘F12. For an interface, this shows all the implementors of that interface and for abstract methods, this shows all concrete implementations of that method.
+
+- Scoured around and havent been able to find an email.
+
+## Notes Mar 3 With Pete
+
+- Figure out the requirements for their testing
+- How are we going to do the testing
+- Maybe start rolling back the testing
+- Create a program that creates a reference link with out adding aditional data
+  - Look briefly at the CI/CD jobs to see what the actual tesing is done
+  - Look for an hour longer to find how they invoke reference linking right now
+    - Look for standalone program
+    - If not look for ioctel()
+  - Look more for how pjd might be testing his code.
+  
+## Notes Mar 5
+
+### User space program for doingnthe reference linking
+
+- `copy_file_range(2)` [https://man7.org/linux/man-pages/man2/copy_file_range.2.html]
+- `module/zfs/brt.c`: "Using copy_file_range(2) will call OS-independent zfs_clone_range() function."
+
+### Testing in ZFS
+
+- `ztest(1)`
+- Full testign suite, requires 3 additional disks but does run without the requirements.
+- Have files of both the output from ztest and from the full testing suite.
+- Tried to find thests that might indicate wheter the BRT is working but i can not find anything. Looked for `cp --reflink`, all `cp` looked for `copy_file_range(2)`. Nothing.
+
+## Notes Mar 6 - Meeting with Pete
+
+- Get UTM running freeBSD and be able to run compiled ZFS.
+- Root FS should be UFS
+- Recompile kernel with updates to ZFS that makes it obvious that your code is in there (maybe)
+- Make sure to install source code as well
+- Start to plug in
+  - As simple as erroring with something
+
+## Notes Mar 6
+
+- Got FreeBSD Running on UTM -> has limited number of guest client tools. Makes things a little bit difficult to work with. Going to figure out how to ssh into UTM to solve many of the problems I currently have.
+
+## Notes Mar 8
+
+Downlaoding and building ZFS:
+
+```bash
+# as user
+git clone https://github.com/openzfs/zfs
+cd zfs
+git fetch
+git branch -v -a
+git checkout remotes/origin/zfs-2.1-release
+git clean -fdx
+
+cd zfs
+./autogen.sh
+env MAKE=gmake ./configure
+gmake -j`sysctl -n hw.ncpu`
+sudo gmake install
+```
+
+Trying the:
+
+```bash
+gmake -j`sysctl -n hw.ncpu`
+``` 
+
+does not work on the master branch. I have tried and got all the steps to successfully work from the `brt` branch, though.
+
+## Notes March 9
+
+- See if ZFS issue still exists after running without my changes
+- See if ZFS issue still exists after running with the version of ZFS in the current FreeBSD 13.1 release
+- See what the difference is between the ZFS module in FreeBSD and the one from openZFS.
+
+Create a pool on the first free disk device:
+
+```bash
+sudo zpool create test /dev/vtbd1
+```
+
+To view the newly created pool type. `df`. This output shows creating and mounting of the `test` pool, and that is now accessible as a file system. Create files for users to browse.
+
+```bash
+cd /test
+ls
+sudo touch test.txt
+ls -al
+```
+
+Test if copy works, it does, but then how do I use the reference link flag?
+
+```bash
+sudo cp test.txt anotherTestFile.txt
+```
+
+Test with my manual testing scripts.
+
+```bash
+cd ~/zfs-internal-reference-count/manual-testing/
+gmake
+cd /test
+sudo ~/zfs-internal-reference-count/manual-testing/my-garbel sourceFile.txt
+sudo ~/zfs-internal-reference-count/manual-testing/my-copy sourceFile.txt destFile.txt
+```
+
+This should work outside of the ZFS filesystem and does.
+
+```bash
+cd ~/zfs-internal-reference-count/manual-testing/
+sudo .my-garbel sourceFile.txt
+sudo ./my-copy sourceFile.txt destFile.txt
+```
+
+## Notes March 16
+
+zfs_debug.c

@@ -236,3 +236,4 @@ Deduplication keeps all data blocks in its table, even those referenced just one
 ## `tests/zfs-tests/tests/functional/cli_root/zpool_get/zpool_get.cfg`
 
 - Test file
+
